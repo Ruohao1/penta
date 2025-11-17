@@ -1,7 +1,11 @@
 package main
 
-import "github.com/Ruohao1/penta"
+import (
+	"github.com/Ruohao1/penta/internal/app"
+)
 
 func main() {
-	penta.Run()
+	if err := app.Execute(); err != nil {
+		panic(err)
+	}
 }
