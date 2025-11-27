@@ -20,8 +20,7 @@ Possible outcomes:
 - A successful scan means the host is up
 - `ECONNREFUSED`, `ECONNRESET` means the host is up
 
-But if timed out, it might be filtered
+But if timed out, it might be filtered. As unprivileged, it cannot perform neither icmp ping nor arp scan.
 You can still pass the -m arp flag to look at the neighbors table to see if the host was cached as up.
-As unprivileged, it cannot perform neither icmp ping nor arp ping.
 
 #### Privileged

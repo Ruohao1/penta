@@ -2,9 +2,11 @@ package hosts
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/Ruohao1/penta/internal/scan"
 	"github.com/Ruohao1/penta/internal/utils"
@@ -49,6 +51,7 @@ func Discover(ctx context.Context, addrs []netip.Addr, opts scan.HostsOptions, e
 	}
 
 	wg.Add(workers)
+	start := time.Now()
 	for i := 0; i < workers; i++ {
 		go worker()
 	}
@@ -72,6 +75,8 @@ func Discover(ctx context.Context, addrs []netip.Addr, opts scan.HostsOptions, e
 
 	select {
 	case <-done:
+		end := float64(time.Since(start).Milliseconds()) / 1000.0
+		fmt.Printf("scan completed in %.3fs\n", end)
 		return nil
 	case err := <-errCh:
 		return err
