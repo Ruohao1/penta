@@ -12,6 +12,18 @@ penta session use --name "my session"
 
 ## Recon
 
+### Hosts scan
+
+```bash
+penta scan hosts -m arp,icmp,tmp 10.0.0.0/24
+penta scan hosts 10.0.0.0-255
+penta scan hosts 10.0.0.0,10.0.0.1
+penta scan hosts 10.0.0.0-255,10.0.1.1
+penta scan hosts 10.0.0.0-255,10.0.1.0/24
+
+penta scan --nmap -- -sn 10.0.0.0/24
+```
+
 ### Port scan
 
 ```bash

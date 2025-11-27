@@ -63,7 +63,20 @@ func LookupIndexPath() (string, error) {
 		return p, nil
 	}
 	if errors.Is(err, os.ErrNotExist) {
-		return p, ErrSessionNotFound
+		return p, ErrIndexNotFound
+	}
+	return "", err
+}
+
+func LookupPentaWorkspaceDir(workspace string) (string, error) {
+	p := filepath.Join(workspace, ".penta")
+
+	_, err := os.Stat(p)
+	if err == nil {
+		return p, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return p, ErrWorkspaceNotFound
 	}
 	return "", err
 }
