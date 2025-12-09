@@ -3,7 +3,9 @@ package app
 import (
 	// "github.com/Ruohao1/penta/internal/config"
 	// "github.com/Ruohao1/penta/internal/utils"
+
 	"github.com/Ruohao1/penta/internal/config"
+	"github.com/Ruohao1/penta/internal/ui"
 	"github.com/Ruohao1/penta/internal/utils"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -54,12 +56,14 @@ func newRootCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
+			ctx := cmd.Context()
+			return ui.RunTUI(ctx, ui.TuiOptions{})
 		},
 	}
 
 	cmd.PersistentFlags().BoolVar(&opts.human, "human", true, "human-friendly log output")
 	cmd.PersistentFlags().CountVarP(&opts.verbosity, "verbose", "v", "increase verbosity (-v, -vv, -vvv)")
+	cmd.PersistentFlags().BoolVar(&opts.tui, "tui mode", true, "use tui mode")
 	return cmd
 }
 
