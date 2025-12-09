@@ -57,3 +57,97 @@ penta brute ssh -U path/to/usernames.txt -p password -h 10.0.0.1 --port 22
 ~/.local/state/penta/   # mutable state (session store, locks, etc.)
 ~/.cache/penta/         # caches, can be nuked
 ```
+
+### Project Structure
+
+```bash
+penta/
+├── cmd/
+│   └── penta/
+│       ├── main.go          # cobra root cmd bootstrap
+│       ├── root.go          # flags, global config, logging init
+│       ├── scan.go          # `penta scan` (non-TUI)
+│       ├── scan_tui.go      # `penta scan --tui` or `penta tui`
+│       ├── report.go        # `penta report` (NDJSON → md/html)
+│       └── version.go       # `penta version`
+│
+│   internal/
+│   ├── engine/
+│   │   ├── native.go          # was scan/native/engine.go
+│   │   ├── nmap.go            # was scan/nmap/engine.go
+│   │   └── options.go         # was scan/options.go (RunOptions, etc.)
+│   ├── hosts/
+│   │   ├── arp.go             # was scan/native/hosts/arp.go
+│   │   ├── discovery.go
+│   │   ├── icmp.go
+│   │   ├── prober.go
+│   │   └── tcp.go
+│   ├── ports/
+│   │   ├── scanner.go         # was scan/native/ports/scanner.go
+    │   ├── tcp.go
+    │   ├── udp.go
+    │   ├── status.go
+    │   ├── version.go
+    │   └── service.go         # if you need helpers
+│   │
+│   ├── targets/
+│   │   ├── parser.go        # targets.txt, stdin, CIDR, hostnames
+│   │   └── scope.go         # scope.txt, in-scope checks
+│   │
+│   ├── hosts/
+│   │   ├── probe.go         # host prober interface
+│   │   ├── tcp_probe.go     # TCP "ping" / connect
+│   │   ├── icmp_probe.go    # ICMP (privileged)
+│   │   └── arp_probe.go     # ARP scan for LAN
+│   │
+│   ├── ports/
+│   │   ├── scanner.go       # ScanPorts(...) per host
+│   │   └── ranges.go        # parse "1-1024,443,8443"
+│   │
+│   ├── web/
+│   │   ├── http_probe.go    # GET /, title, server, status
+│   │   ├── tls_info.go      # TLS version, cipher, cert
+│   │   └── robots.go        # robots.txt fetch (MVP or v2)
+│   │
+│   ├── model/
+│   │   ├── finding.go       # Finding struct (your NDJSON schema)
+│   │   └── event.go         # EventType, Event {Type, Finding, Err, Host}
+│   │
+│   ├── output/
+│   │   ├── output.go        # Sink interface: HandleEvent, Close
+│   │   ├── human/
+│   │   │   └── human.go     # human-readable stdout (non-TUI)
+│   │   ├── ndjson/
+│   │   │   └── ndjson.go    # NDJSON sink (machine mode)
+│   │   └── tui/
+│   │       └── sink.go      # bridges events → Bubble Tea (tea.Msg)
+│   │
+│   ├── ui/
+│   │   ├── model.go         # Bubble Tea model (state, Init, Update, View)
+│   │   ├── components.go    # tables, status bars, keymap, styles
+│   │   └── messages.go      # Msg types wrapping model.Event, errors, etc.
+│   │
+│   ├── report/
+│   │   ├── reader.go        # read NDJSON → []Finding
+│   │   ├── summarize.go     # group by host/check, counts, severities
+│   │   └── markdown.go      # md renderer; later html.go for HTML
+│   │
+│   ├── config/
+│   │   ├── config.go        # struct, default values
+│   │   └── loader.go        # Viper: flags > env > file
+│   │
+│   └── log/
+│       └── logger.go        # zerolog setup, human vs json logs
+│
+├── pkg/                     # public helpers (only if you want reuse)
+│   └── penta/
+│       └── client.go        # (optional) if you later expose engine as lib
+│
+├── testdata/                # local fixtures, http/tls test servers config
+│
+├── scripts/                 # dev scripts (lint, fmt, etc.)
+│
+├── go.mod
+└── go.sum
+
+```
