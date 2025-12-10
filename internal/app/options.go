@@ -5,6 +5,5 @@ type globalOptions struct {
 	human     bool
 
 	tui bool
-
 	// TODO: add other global options here
 }

@@ -3,15 +3,23 @@ package model
 import "time"
 
 // EventType tells the consumer what kind of event this is.
-type EventType string
+type EventType int
 
 const (
-	EventTypeFinding   EventType = "finding"    // wraps a Finding
-	EventTypeHostStart EventType = "host_start" // "we are starting work on this host"
-	EventTypeHostDone  EventType = "host_done"  // "we are done with this host"
-	EventTypeProgress  EventType = "progress"   // overall scan progress update
-	EventTypeLog       EventType = "log"        // informational message
-	EventTypeError     EventType = "error"      // non-fatal error
+	EventFinding EventType = 1 << iota
+
+	EventHostUp
+	EventPortOpen
+
+	EventProbeStart
+	EventProbeDone
+
+	EventEngineStart
+	EventEngineStop
+
+	EventIdle
+	EventError
+	EventLog
 )
 
 // Event is what Engine emits over the channel.
