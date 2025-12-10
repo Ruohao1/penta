@@ -1,45 +1,17 @@
 package views
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Ruohao1/penta/internal/ui/components"
 )
 
-type HomeViewModel struct {
-	Version string
-
-	Menu components.List
-	// Add later:
-	// LastScanSummary *ScanSummary
-	// Notifications   []string
+type HomeModel struct {
+	Menu components.ListModel
 }
 
-var HomeKeyMap = components.KeyMap{
-	Up: key.NewBinding(
-		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "move menu up"),
-	),
-	Down: key.NewBinding(
-		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "move menu down"),
-	),
-	Enter: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "select menu item"),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "quit"),
-	),
-	ToggleHelp: key.NewBinding(
-		key.WithKeys("?"),
-		key.WithHelp("?", "toggle help"),
-	),
-}
-
-func NewHomeView() HomeViewModel {
+func NewHomeModel() HomeModel {
 	menuItems := []components.ListItem{
 		{Title: "Start New Scan", Desc: "[1]"},
 		{Title: "Load Targets from File", Desc: "[2]"},
@@ -51,14 +23,23 @@ func NewHomeView() HomeViewModel {
 	menu := components.NewList(menuItems, 5)
 	menu.Selected = 0
 
-	return HomeViewModel{
-		Version: "0.0.1",
-		Menu:    menu,
+	return HomeModel{
+		Menu: menu,
 	}
 }
 
-func (vm HomeViewModel) Render() string {
-	banner := components.NewBanner(vm.Version).Render(components.RenderContext{})
+func (vm HomeModel) Init() tea.Cmd {
+	return nil
+}
+
+func (vm HomeModel) Update(msg tea.Msg) (HomeModel, tea.Cmd) {
+	var cmd tea.Cmd
+	vm.Menu, cmd = vm.Menu.Update(msg)
+	return vm, cmd
+}
+
+func (vm HomeModel) View() string {
+	banner := components.NewBanner().Render(components.RenderContext{})
 
 	// Placeholder body; you can add menu + last scan summary here later.
 	body := lipgloss.NewStyle().

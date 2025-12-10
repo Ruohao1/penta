@@ -1,8 +1,6 @@
 package components
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -12,15 +10,13 @@ type Banner struct {
 	title    string
 	name     string
 	subtitle string
-	version  string
 }
 
-func NewBanner(version string) Banner {
+func NewBanner() Banner {
 	return Banner{
 		asciiTitle(),
 		"Penta",
 		"Pentest Automation Engine",
-		version,
 	}
 }
 
@@ -41,7 +37,7 @@ func (b Banner) Render(ctx RenderContext) string {
 		Align(lipgloss.Center)
 
 	sub := subtitleStyle.Render(b.subtitle)
-	meta := metaStyle.Render(fmt.Sprintf("%s · v%s", b.name, b.version))
+	meta := metaStyle.Render(b.name)
 
 	return lipgloss.JoinVertical(lipgloss.Center,
 		titleStyle,

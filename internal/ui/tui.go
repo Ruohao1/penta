@@ -5,7 +5,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Ruohao1/penta/internal/ui/components"
 	"github.com/Ruohao1/penta/internal/ui/views"
 )
 
@@ -14,23 +13,23 @@ type View int
 const (
 	HomeView View = iota
 	ScanView
+	ConsoleView
 )
 
 type RootModel struct {
 	activeView View
 	// ...
 
-	help components.HelpComponent
-	home views.HomeViewModel
+	home    views.HomeModel
+	scan    views.ScanModel
+	console views.ConsoleModel
 }
 
 func NewRootModel() RootModel {
-	help := components.NewHelpComponent()
-	help.SetKeys(views.HomeKeyMap)
 	return RootModel{
-		activeView: 0,
-		help:       help,
-		home:       views.NewHomeView(),
+		home:    views.NewHomeModel(),
+		scan:    views.NewScanModel(),
+		console: views.NewConsoleModel(),
 	}
 }
 
@@ -44,59 +43,37 @@ func RunTUI(ctx context.Context, _ TuiOptions) error {
 	return err
 }
 
-func (m RootModel) Init() tea.Cmd { return nil }
+func (m RootModel) Init() tea.Cmd {
+	return nil
+}
 
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return m.handleKey(msg)
-
-		// other message types: eventMsg, tickMsg, window size, etc.
+	var cmd tea.Cmd
+	switch m.activeView {
+	case HomeView:
+		m.home, cmd = m.home.Update(msg)
+		if cmd != nil {
+			return m, cmd
+		}
+	// case ScanView:
+	// 	m.scan.Update(msg)
+	case ConsoleView:
+		m.console.Update(msg)
 	}
 
 	return m, nil
 }
 
-func (m RootModel) handleKey(msg tea.KeyMsg) (RootModel, tea.Cmd) {
-	key := msg.String()
-
-	// --- global keys, independent of view ---
-	switch key {
-	case "ctrl+c":
-		return m, tea.Quit
-
-	case "?":
-		m.help.Toggle()
-		return m, nil
-	}
-
-	// --- per-view keys ---
-	switch m.activeView {
-	case HomeView:
-		return m.handleHomeKey(msg)
-
-	// case ScanView:
-	// 	return m.handleScanKey(msg)
-
-	// add more views as needed
-	default:
-		return m, nil
-	}
-}
-
 func (m RootModel) View() string {
-	var main string
 	switch m.activeView {
+
 	case HomeView:
-		main = m.home.Render()
+		return m.home.View()
+	// case ScanView:
+	// 	return m.scan.View()
+	case ConsoleView:
+		return m.console.View()
 	default:
-		return "unknown view"
+		return "Undefined view"
 	}
-
-	helpView := m.help.View()
-	if helpView == "" {
-		return main
-	}
-
-	return main + "\n\n" + helpView
 }

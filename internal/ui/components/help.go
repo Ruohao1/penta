@@ -3,109 +3,95 @@ package components
 import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
-type KeyMap struct {
-	Up         key.Binding
-	Down       key.Binding
-	Next       key.Binding
-	Prev       key.Binding
-	Quit       key.Binding
-	ToggleHelp key.Binding
+type GeneralHelpKeyMap struct {
+	Toggle key.Binding
 }
 
-type HelpComponent struct {
-	Help  help.Model
-	Keys  KeyMap
-	Shown bool
+var generalHelpKeyMap = GeneralHelpKeyMap{
+	Toggle: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help"),
+	),
 }
 
-func NewHelpComponent() HelpComponent {
-	h := help.New()
-	h.ShowAll = false
-	return HelpComponent{
-		Help:  h,
-		Keys:  KeyMap{}, // will be set per-view
-		Shown: true,
+func (k GeneralHelpKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Toggle}
+}
+
+func (k GeneralHelpKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Toggle},
 	}
 }
 
-// isZero tells us whether a binding is effectively unset.
-func isZero(b key.Binding) bool {
-	return len(b.Keys()) == 0 &&
-		b.Help().Key == "" &&
-		b.Help().Desc == ""
+type mergedKeyMap struct {
+	maps []help.KeyMap
 }
 
-// ShortHelp implements help.Helper.
-// This is the compact line shown at the bottom.
-func (k KeyMap) ShortHelp() []key.Binding {
-	var bindings []key.Binding
+func (m mergedKeyMap) ShortHelp() []key.Binding {
+	var out []key.Binding
+	for _, km := range m.maps {
+		out = append(out, km.ShortHelp()...)
+	}
+	return out
+}
 
-	add := func(b key.Binding) {
-		if !isZero(b) {
-			bindings = append(bindings, b)
+func (m mergedKeyMap) FullHelp() [][]key.Binding {
+	var out [][]key.Binding
+	for _, km := range m.maps {
+		out = append(out, km.FullHelp()...)
+	}
+	return out
+}
+
+func MergeKeyMaps(maps ...help.KeyMap) help.KeyMap {
+	return mergedKeyMap{maps: maps}
+}
+
+type HelpModel struct {
+	keys       help.KeyMap
+	toggle     key.Binding
+	help       help.Model
+	inputStyle lipgloss.Style
+	lastKey    string
+}
+
+func NewHelpModel(keys help.KeyMap) HelpModel {
+	return HelpModel{
+		keys:   MergeKeyMaps(keys, generalHelpKeyMap),
+		toggle: generalHelpKeyMap.Toggle,
+		help:   help.New(),
+		inputStyle: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF75B7")),
+	}
+}
+
+func (m *HelpModel) SetKeyMap(keys help.KeyMap) {
+	m.keys = MergeKeyMaps(keys, generalHelpKeyMap)
+}
+
+func (m HelpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.help.Width = msg.Width
+
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.toggle):
+			m.help.ShowAll = !m.help.ShowAll
 		}
 	}
-
-	// Order for short help: nav + quit + toggle
-	add(k.Up)
-	add(k.Down)
-	add(k.Next)
-	add(k.Prev)
-	add(k.Quit)
-	add(k.ToggleHelp)
-
-	return bindings
+	return m, nil
 }
 
-// FullHelp implements help.Helper.
-// This is the expanded multi-line help.
-func (k KeyMap) FullHelp() [][]key.Binding {
-	var nav, global []key.Binding
-
-	add := func(dst *[]key.Binding, b key.Binding) {
-		if !isZero(b) {
-			*dst = append(*dst, b)
-		}
-	}
-
-	// group 1: navigation
-	add(&nav, k.Up)
-	add(&nav, k.Down)
-	add(&nav, k.Next)
-	add(&nav, k.Prev)
-
-	// group 2: global actions
-	add(&global, k.Quit)
-	add(&global, k.ToggleHelp)
-
-	var rows [][]key.Binding
-	if len(nav) > 0 {
-		rows = append(rows, nav)
-	}
-	if len(global) > 0 {
-		rows = append(rows, global)
-	}
-	return rows
+func (m HelpModel) Init() tea.Cmd {
+	return nil
 }
 
-func (hc *HelpComponent) SetKeys(k KeyMap) {
-	hc.Keys = k
-}
-
-func (hc *HelpComponent) Toggle() {
-	if !hc.Shown {
-		hc.Shown = true
-		hc.Help.ShowAll = false
-		return
-	}
-	hc.Help.ShowAll = !hc.Help.ShowAll
-}
-
-func (hc HelpComponent) View() string {
-	if !hc.Shown {
-		return ""
-	}
-	return hc.Help.View(hc.Keys)
+func (m HelpModel) View() string {
+	return m.help.View(m.keys)
 }
