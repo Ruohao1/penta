@@ -1,6 +1,7 @@
 package views
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -8,29 +9,42 @@ import (
 )
 
 type HomeModel struct {
-	Menu components.ListModel
+	Menu components.MenuModel
 }
 
 func NewHomeModel() HomeModel {
-	menuItems := []components.ListItem{
-		{Title: "Start New Scan", Desc: "[1]"},
-		{Title: "Load Targets from File", Desc: "[2]"},
-		{Title: "Interactive mode", Desc: "[i]"},
-		{Title: "View Last Report", Desc: "[r]"},
-		{Title: "Quit", Desc: "[q]"},
-	}
+	scanKey := key.NewBinding(
+		key.WithKeys("1", "s"),
+		key.WithHelp("1/s", "start scan"),
+	)
+	consoleKey := key.NewBinding(
+		key.WithKeys("c"),
+		key.WithHelp("c", "open console"),
+	)
 
-	menu := components.NewList(menuItems, 5)
-	menu.Selected = 0
+	scanItem := components.NewMenuItem(
+		"Start New Scan",
+		"Launch scan workflow",
+		scanKey,
+		nil,
+	)
 
-	return HomeModel{
-		Menu: menu,
-	}
+	consoleItem := components.NewMenuItem(
+		"Open Console",
+		"Interactive commands & logs",
+		consoleKey,
+		SwitchViewCmd(ConsoleView),
+	)
+
+	menu := components.NewMenu([]components.MenuItem{
+		scanItem,
+		consoleItem,
+	}, 5)
+
+	return HomeModel{Menu: menu}
 }
 
-func (vm HomeModel) Init() tea.Cmd {
-	return nil
-}
+func (vm HomeModel) Init() tea.Cmd { return nil }
 
 func (vm HomeModel) Update(msg tea.Msg) (HomeModel, tea.Cmd) {
 	var cmd tea.Cmd
@@ -40,18 +54,6 @@ func (vm HomeModel) Update(msg tea.Msg) (HomeModel, tea.Cmd) {
 
 func (vm HomeModel) View() string {
 	banner := components.NewBanner().Render(components.RenderContext{})
-
-	// Placeholder body; you can add menu + last scan summary here later.
-	body := lipgloss.NewStyle().
-		MarginTop(1).
-		Render(vm.Menu.View())
-
-	// Layout: banner at top, body in middle, cheat sheet at bottom.
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		banner,
-		"",
-		body,
-		"",
-	)
+	body := lipgloss.NewStyle().MarginTop(1).Render(vm.Menu.View())
+	return lipgloss.JoinVertical(lipgloss.Center, banner, "", body, "")
 }

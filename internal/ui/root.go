@@ -8,16 +8,8 @@ import (
 	"github.com/Ruohao1/penta/internal/ui/views"
 )
 
-type View int
-
-const (
-	HomeView View = iota
-	ScanView
-	ConsoleView
-)
-
 type RootModel struct {
-	activeView View
+	activeView views.View
 	// ...
 
 	home    views.HomeModel
@@ -49,29 +41,33 @@ func (m RootModel) Init() tea.Cmd {
 
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	switch m.activeView {
-	case HomeView:
-		m.home, cmd = m.home.Update(msg)
-		if cmd != nil {
-			return m, cmd
-		}
-	// case ScanView:
-	// 	m.scan.Update(msg)
-	case ConsoleView:
-		m.console.Update(msg)
+
+	switch msg := msg.(type) {
+	case views.SwitchViewMsg:
+		m.activeView = msg.View
+		return m, nil
 	}
 
-	return m, nil
+	switch m.activeView {
+	case views.HomeView:
+		m.home, cmd = m.home.Update(msg)
+	// case ScanView:
+	// 	m.scan.Update(msg)
+	case views.ConsoleView:
+		m.console, cmd = m.console.Update(msg)
+	}
+
+	return m, cmd
 }
 
 func (m RootModel) View() string {
 	switch m.activeView {
 
-	case HomeView:
+	case views.HomeView:
 		return m.home.View()
 	// case ScanView:
 	// 	return m.scan.View()
-	case ConsoleView:
+	case views.ConsoleView:
 		return m.console.View()
 	default:
 		return "Undefined view"

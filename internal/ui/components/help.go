@@ -28,11 +28,11 @@ func (k GeneralHelpKeyMap) FullHelp() [][]key.Binding {
 	}
 }
 
-type mergedKeyMap struct {
+type MergedKeyMap struct {
 	maps []help.KeyMap
 }
 
-func (m mergedKeyMap) ShortHelp() []key.Binding {
+func (m MergedKeyMap) ShortHelp() []key.Binding {
 	var out []key.Binding
 	for _, km := range m.maps {
 		out = append(out, km.ShortHelp()...)
@@ -40,7 +40,7 @@ func (m mergedKeyMap) ShortHelp() []key.Binding {
 	return out
 }
 
-func (m mergedKeyMap) FullHelp() [][]key.Binding {
+func (m MergedKeyMap) FullHelp() [][]key.Binding {
 	var out [][]key.Binding
 	for _, km := range m.maps {
 		out = append(out, km.FullHelp()...)
@@ -49,7 +49,7 @@ func (m mergedKeyMap) FullHelp() [][]key.Binding {
 }
 
 func MergeKeyMaps(maps ...help.KeyMap) help.KeyMap {
-	return mergedKeyMap{maps: maps}
+	return MergedKeyMap{maps: maps}
 }
 
 type HelpModel struct {
