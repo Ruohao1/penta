@@ -2,14 +2,14 @@ package hosts
 
 import (
 	"context"
-	"net/netip"
 
 	"github.com/Ruohao1/penta/internal/scan"
+	"github.com/Ruohao1/penta/internal/targets"
 )
 
 type Prober interface {
 	Name() string
-	Probe(ctx context.Context, ip netip.Addr, opts scan.HostsOptions) (scan.Result, error)
+	Probe(ctx context.Context, target targets.Target, opts scan.HostsOptions) (scan.Result, error)
 }
 
 func NewProbers(methods []scan.Method) []Prober {

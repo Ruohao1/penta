@@ -3,17 +3,18 @@ package targets
 import (
 	"fmt"
 	"net/netip"
+	"net/url"
 	"strconv"
 	"strings"
 )
 
-func Resolve(expr string) ([]netip.Addr, error) {
+func Resolve(expr string, targetType TargetType) ([]Target, error) {
 	expr = strings.TrimSpace(expr)
 	if expr == "" {
 		return nil, fmt.Errorf("empty targets expression")
 	}
 
-	var out []netip.Addr
+	var out []Target
 
 	parts := strings.SplitSeq(expr, ",")
 	for raw := range parts {
@@ -21,36 +22,78 @@ func Resolve(expr string) ([]netip.Addr, error) {
 		if part == "" {
 			continue
 		}
-
-		switch {
-		case strings.Contains(part, "/"):
-			ips, err := expandCIDR(part, true)
-			if err != nil {
-				return nil, fmt.Errorf("parse %q as cidr: %w", part, err)
+		switch targetType {
+		case TargetTypeURL:
+			// Try URL (requires scheme to avoid ambiguity with hostnames like "example.com")
+			if u, ok := parseAbsoluteURL(part); ok {
+				out = append(out, *NewTargetURL(u))
+				continue
 			}
-			out = append(out, ips...)
+		case TargetTypeHost:
 
-		case strings.Contains(part, "-"):
-			ips, err := expandRange(part)
-			if err != nil {
-				return nil, fmt.Errorf("parse %q as range: %w", part, err)
-			}
-			out = append(out, ips...)
+			switch {
+			case strings.Contains(part, "/"):
+				ips, err := expandCIDR(part, true)
+				if err != nil {
+					return nil, fmt.Errorf("parse %q as cidr: %w", part, err)
+				}
+				for _, ip := range ips {
+					out = append(out, *NewTargetHostFromIP(ip))
+				}
 
-		default:
-			ip, err := netip.ParseAddr(part)
-			if err != nil {
-				return nil, fmt.Errorf("parse %q as ip: %w", part, err)
+			case strings.Contains(part, "-"):
+				ips, err := expandRange(part)
+				if err != nil {
+					return nil, fmt.Errorf("parse %q as range: %w", part, err)
+				}
+				for _, ip := range ips {
+					out = append(out, *NewTargetHostFromIP(ip))
+				}
+
+			default:
+				// Try IP first (fast path)
+				if ip, err := netip.ParseAddr(part); err == nil {
+					out = append(out, *NewTargetHostFromIP(ip))
+					continue
+				}
+
+				// Fallback: hostname
+				if !looksLikeHostname(part) {
+					return nil, fmt.Errorf("parse %q: not an ip, not a url, not a hostname", part)
+				}
+				out = append(out, *NewTargetHostFromHostname(part))
 			}
-			out = append(out, ip)
 		}
 	}
 
 	if len(out) == 0 {
 		return nil, fmt.Errorf("no valid targets in %q", expr)
 	}
-
 	return out, nil
+}
+
+func parseAbsoluteURL(s string) (string, bool) {
+	u, err := url.Parse(s)
+	if err != nil || u == nil {
+		return "", false
+	}
+	// Require absolute URL: scheme://host...
+	if u.Scheme == "" || u.Host == "" {
+		return "", false
+	}
+	return u.String(), true
+}
+
+func looksLikeHostname(s string) bool {
+	// minimal sanity check (you can tighten this later)
+	if s == "" || strings.ContainsAny(s, " \t\r\n/") {
+		return false
+	}
+	// disallow obvious garbage
+	if strings.HasPrefix(s, ".") || strings.HasSuffix(s, ".") {
+		return false
+	}
+	return true
 }
 
 func expandCIDR(expr string, skipReservedAddr bool) ([]netip.Addr, error) {

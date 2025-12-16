@@ -16,10 +16,12 @@ const (
 
 	EventEngineStart
 	EventEngineStop
+	EventEngineDone
 
 	EventIdle
 	EventError
 	EventLog
+	EventDone
 )
 
 // Event is what Engine emits over the channel.
@@ -40,6 +42,10 @@ type Event struct {
 	// For log/error events
 	Message string `json:"message,omitempty"` // human-readable message
 	Err     string `json:"err,omitempty"`     // error text if any
+}
+
+func NewEvent(t EventType) Event {
+	return Event{Type: t}
 }
 
 // Progress is for high-level progress reporting (TUI / verbose mode).

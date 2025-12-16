@@ -69,6 +69,6 @@ func newRootCmd() *cobra.Command {
 
 func init() {
 	// rootCmd.AddCommand(NewSessionCmd())
-	// rootCmd.AddCommand(NewScanCmd())
+	rootCmd.AddCommand(NewScanCmd())
 	// rootCmd.AddCommand(NewBruteCmd())
 }

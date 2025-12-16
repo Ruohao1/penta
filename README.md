@@ -22,6 +22,7 @@ penta scan hosts 10.0.0.0-255,10.0.1.1
 penta scan hosts 10.0.0.0-255,10.0.1.0/24
 
 penta scan --nmap -- -sn 10.0.0.0/24
+penta scan 10.0.0.0/24 --nmap -- -sn 
 ```
 
 ### Port scan

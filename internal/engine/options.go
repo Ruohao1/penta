@@ -1,11 +1,15 @@
 package engine
 
-import "time"
+import (
+	"time"
+
+	"github.com/Ruohao1/penta/internal/targets"
+)
 
 type RunOptions struct {
 	// Target selection
-	TargetsExpr string   // raw targets (IPs, CIDRs, domains)
-	Scope       []string // allow-list enforcement
+	Targets []targets.Target // parsed targets
+	Scope   []string         // allow-list enforcement
 
 	// Scanning behavior
 	TCPPorts           []int // explicit port list
@@ -16,12 +20,15 @@ type RunOptions struct {
 	TLS                bool  // enable TLS fingerprinting
 
 	// Performance + limits
-	Concurrency int           // worker pool size
-	RateLimit   int           // global dial limit per second
+	Concurrency int // worker pool size
+	MinRate     int
+	MaxRate     int
+	MaxRetries  int // retry failed probes
+
+	Timeout     time.Duration
 	TimeoutTCP  time.Duration // per-dial timeout
 	TimeoutHTTP time.Duration // per HTTP request
 	TimeoutTLS  time.Duration // TLS handshake deadline
-	Retries     int           // retry failed probes
 
 	// OpSec + networking
 	Jitter     time.Duration // random delay ± jitter per request

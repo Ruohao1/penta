@@ -10,7 +10,6 @@ import (
 
 type RootModel struct {
 	activeView views.View
-	// ...
 
 	home    views.HomeModel
 	scan    views.ScanModel
@@ -42,11 +41,11 @@ func (m RootModel) Init() tea.Cmd {
 func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	switch msg := msg.(type) {
-	case views.SwitchViewMsg:
-		m.activeView = msg.View
-		return m, nil
-	}
+	// switch msg := msg.(type) {
+	// case controller.SwitchViewMsg:
+	// 	m.activeView = msg.View
+	// 	return m, nil
+	// }
 
 	switch m.activeView {
 	case views.HomeView:
