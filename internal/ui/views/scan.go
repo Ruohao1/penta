@@ -34,7 +34,7 @@ type ScanStats struct {
 
 type ScanModel struct {
 	engine  *engine.Engine
-	runOpts engine.RunOptions
+	runOpts model.RunOptions
 
 	state ScanState
 	err   error

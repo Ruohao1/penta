@@ -10,10 +10,10 @@ import (
 )
 
 type Engine struct {
-	Opts *RunOptions
+	Opts *model.RunOptions
 }
 
-func New(opts *RunOptions) *Engine {
+func New(opts *model.RunOptions) *Engine {
 	return &Engine{Opts: opts}
 }
 
@@ -27,11 +27,11 @@ func (eng Engine) Run(ctx context.Context, req model.Request) <-chan model.Event
 		var err error
 		switch req.Mode {
 		case model.ModeHosts:
-			err = eng.runHosts(ctx, bus.Emit, req)
+			err = eng.runHosts(ctx, req, bus.Emit)
 		case model.ModePorts:
-			err = eng.runPorts(ctx, bus.Emit, req)
+			err = eng.runPorts(ctx, req, bus.Emit)
 		case model.ModeWeb:
-			err = eng.runWeb(ctx, bus.Emit, req)
+			err = eng.runWeb(ctx, req, bus.Emit)
 		default:
 			err = fmt.Errorf("unknown mode %q", req.Mode)
 		}
@@ -47,10 +47,11 @@ func (eng Engine) Run(ctx context.Context, req model.Request) <-chan model.Event
 	return bus.Out()
 }
 
-func (eng Engine) runHosts(ctx context.Context, emit func(context.Context, model.Event), req model.Request) error {
+func (eng Engine) runHosts(ctx context.Context, req model.Request, emit func(context.Context, model.Event)) error {
+	eng.Opts.Compile(req)
 	switch req.Backend {
 	case model.BackendInternal:
-		return hosts.Run(ctx, req, emit)
+		return hosts.Run(ctx, *eng.Opts, emit)
 	case model.BackendNmap:
 		return external.RunNmap(ctx, req, emit)
 	default:
@@ -58,10 +59,10 @@ func (eng Engine) runHosts(ctx context.Context, emit func(context.Context, model
 	}
 }
 
-func (eng Engine) runPorts(ctx context.Context, emit func(context.Context, model.Event), req model.Request) error {
+func (eng Engine) runPorts(ctx context.Context, req model.Request, emit func(context.Context, model.Event)) error {
 	return nil
 }
 
-func (eng Engine) runWeb(ctx context.Context, emit func(context.Context, model.Event), req model.Request) error {
+func (eng Engine) runWeb(ctx context.Context, req model.Request, emit func(context.Context, model.Event)) error {
 	return nil
 }

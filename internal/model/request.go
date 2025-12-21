@@ -4,6 +4,14 @@ import (
 	"context"
 )
 
+type Request struct {
+	Mode    Mode        // hosts/ports/web
+	Backend BackendName // internal/nmap/...
+
+	// External backend passthrough (tool owns parsing)
+	ToolArgs []string // everything after `--` (e.g. ["-sn","10.0.0.0/24"])
+}
+
 type Mode string
 
 const (
@@ -19,14 +27,6 @@ const (
 	BackendNmap     BackendName = "nmap"
 	BackendNuclei   BackendName = "nuclei"
 )
-
-type Request struct {
-	Mode    Mode        // hosts/ports/web
-	Backend BackendName // internal/nmap/...
-
-	// External backend passthrough (tool owns parsing)
-	ToolArgs []string // everything after `--` (e.g. ["-sn","10.0.0.0/24"])
-}
 
 type ExternalTool string
 

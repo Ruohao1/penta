@@ -3,7 +3,6 @@ package views
 import (
 	"strings"
 
-	"github.com/Ruohao1/penta/internal/ui/controller"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -57,8 +56,8 @@ func (m ConsoleModel) Update(msg tea.Msg) (ConsoleModel, tea.Cmd) {
 		switch msg.String() {
 
 		// ESC: go back (don’t kill the whole program)
-		case "esc":
-			return m, controller.SwitchViewCmd(controller.HomeView)
+		// case "esc":
+		// 	return m, controller.SwitchViewCmd(controller.HomeView)
 
 		// Ctrl+C: quit program (global behavior)
 		case "ctrl+c":

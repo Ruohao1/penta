@@ -6,15 +6,17 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/Ruohao1/penta/internal/model"
 )
 
-func Resolve(expr string, targetType TargetType) ([]Target, error) {
+func Resolve(expr string, targetType model.TargetType) ([]model.Target, error) {
 	expr = strings.TrimSpace(expr)
 	if expr == "" {
 		return nil, fmt.Errorf("empty targets expression")
 	}
 
-	var out []Target
+	var out []model.Target
 
 	parts := strings.SplitSeq(expr, ",")
 	for raw := range parts {
@@ -23,13 +25,13 @@ func Resolve(expr string, targetType TargetType) ([]Target, error) {
 			continue
 		}
 		switch targetType {
-		case TargetTypeURL:
+		case model.TargetTypeURL:
 			// Try URL (requires scheme to avoid ambiguity with hostnames like "example.com")
 			if u, ok := parseAbsoluteURL(part); ok {
-				out = append(out, *NewTargetURL(u))
+				out = append(out, *model.NewTargetURL(u))
 				continue
 			}
-		case TargetTypeHost:
+		case model.TargetTypeHost:
 
 			switch {
 			case strings.Contains(part, "/"):
@@ -38,7 +40,7 @@ func Resolve(expr string, targetType TargetType) ([]Target, error) {
 					return nil, fmt.Errorf("parse %q as cidr: %w", part, err)
 				}
 				for _, ip := range ips {
-					out = append(out, *NewTargetHostFromIP(ip))
+					out = append(out, *model.NewTargetHostFromIP(ip))
 				}
 
 			case strings.Contains(part, "-"):
@@ -47,13 +49,13 @@ func Resolve(expr string, targetType TargetType) ([]Target, error) {
 					return nil, fmt.Errorf("parse %q as range: %w", part, err)
 				}
 				for _, ip := range ips {
-					out = append(out, *NewTargetHostFromIP(ip))
+					out = append(out, *model.NewTargetHostFromIP(ip))
 				}
 
 			default:
 				// Try IP first (fast path)
 				if ip, err := netip.ParseAddr(part); err == nil {
-					out = append(out, *NewTargetHostFromIP(ip))
+					out = append(out, *model.NewTargetHostFromIP(ip))
 					continue
 				}
 
@@ -61,7 +63,7 @@ func Resolve(expr string, targetType TargetType) ([]Target, error) {
 				if !looksLikeHostname(part) {
 					return nil, fmt.Errorf("parse %q: not an ip, not a url, not a hostname", part)
 				}
-				out = append(out, *NewTargetHostFromHostname(part))
+				out = append(out, *model.NewTargetHostFromHostname(part))
 			}
 		}
 	}

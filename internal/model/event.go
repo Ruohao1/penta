@@ -3,25 +3,36 @@ package model
 import "time"
 
 // EventType tells the consumer what kind of event this is.
-type EventType int
+type EventType string
 
 const (
-	EventFinding EventType = 1 << iota
+	// Findings / results
+	EventFinding EventType = "finding"
 
-	EventHostUp
-	EventPortOpen
+	// Host lifecycle
+	EventHostUp   EventType = "host_up"
+	EventHostDown EventType = "host_down"
 
-	EventProbeStart
-	EventProbeDone
+	// Port / service
+	EventPortOpen   EventType = "port_open"
+	EventPortClosed EventType = "port_closed"
 
-	EventEngineStart
-	EventEngineStop
-	EventEngineDone
+	// Probe execution
+	EventProbeStart EventType = "probe_start"
+	EventProbeDone  EventType = "probe_done"
 
-	EventIdle
-	EventError
-	EventLog
-	EventDone
+	// Engine lifecycle
+	EventEngineStart EventType = "engine_start"
+	EventEngineStop  EventType = "engine_stop"
+	EventEngineDone  EventType = "engine_done"
+
+	// State / control
+	EventIdle EventType = "idle"
+	EventDone EventType = "done"
+
+	// Observability
+	EventError EventType = "error"
+	EventLog   EventType = "log"
 )
 
 // Event is what Engine emits over the channel.
@@ -32,7 +43,6 @@ type Event struct {
 
 	// Optional common fields for routing / display
 	Target string `json:"target,omitempty"` // usually IP/hostname
-	Check  string `json:"check,omitempty"`  // check name, e.g. "tcp_open","http_probe"
 
 	// Payloads (only one of these is typically non-nil per event)
 	Finding  *Finding  `json:"finding,omitempty"`  // for EventTypeFinding
@@ -46,6 +56,11 @@ type Event struct {
 
 func NewEvent(t EventType) Event {
 	return Event{Type: t}
+}
+
+func NewEventWithProgress(t EventType, total int) Event {
+	progress := &Progress{TotalTargets: total}
+	return Event{Type: t, Progress: progress}
 }
 
 // Progress is for high-level progress reporting (TUI / verbose mode).

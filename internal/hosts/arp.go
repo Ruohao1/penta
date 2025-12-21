@@ -7,9 +7,7 @@ import (
 	"net/netip"
 	"runtime"
 
-	"github.com/Ruohao1/penta/internal/engine"
 	"github.com/Ruohao1/penta/internal/model"
-	"github.com/Ruohao1/penta/internal/scan"
 	"github.com/vishvananda/netlink"
 )
 
@@ -17,43 +15,45 @@ type arpProber struct{}
 
 func (p *arpProber) Name() string { return "arp" }
 
-func (p *arpProber) Probe(ctx context.Context, ip netip.Addr, opts engine.RunOptions) (model.Host, model.Finding, error) {
+func (p *arpProber) Probe(ctx context.Context, target model.Target, opts model.RunOptions) (model.Finding, error) {
+	host := target.MakeHost()
+	host.State = model.HostStateUnknown
+
 	finding := model.Finding{
-		Check: "arp_probing",
-	}
-	host := model.Host{
-		Addr:            ip,
-		State:           model.HostStateUnknown,
-		DiscoveryMethod: scan.MethodARP,
+		Check: "arp_probe",
+		Proto: model.ProtocolARP,
+		Host:  &host,
+		Meta:  map[string]any{},
 	}
 
-	if !canUseARP(ip) {
-		host.Reason = fmt.Sprintf("arp_unsupported")
-		return host, nil
+	if !canUseARP(target) {
+		finding.Reason = fmt.Sprintf("arp_unsupported")
+		return finding, nil
 	}
 
-	neigh, err := lookupARP(ip)
+	neigh, err := lookupARP(target.Addr)
 	if err != nil {
-		result.Meta["err"] = err.Error()
-		result.Status = scan.StatusUnknown
-		return result, nil
+		host.State = model.HostStateDown
+
+		finding.Meta["err"] = err.Error()
+		return finding, nil
 	}
 
 	switch neigh.State {
 	case netlink.NUD_REACHABLE, netlink.NUD_STALE, netlink.NUD_DELAY, netlink.NUD_PROBE:
-		result.Status = scan.StatusUp
-		result.Meta["mac"] = neigh.HardwareAddr.String()
-		result.Meta["dev"] = neigh.LinkIndex
-		result.Meta["state"] = neigh.State
-		return result, nil
+		host.State = model.HostStateUp
+		host.MAC = neigh.HardwareAddr.String()
+
+		finding.Reason = "arp_reachable"
+		return finding, nil
 
 	case netlink.NUD_INCOMPLETE, netlink.NUD_FAILED:
-		result.Status = scan.StatusDown
-		result.Meta["signal"] = "arp_incomplete"
-		result.Meta["state"] = neigh.State
-		return result, nil
+		host.State = model.HostStateDown
+
+		finding.Reason = "arp_incomplete"
+		return finding, nil
 	}
-	return result, nil
+	return finding, nil
 }
 
 func lookupARP(ip netip.Addr) (netlink.Neigh, error) {
@@ -94,8 +94,8 @@ func lookupLinkIndex(ip netip.Addr) (int, error) {
 	return -1, fmt.Errorf("link not found for ip %s", ip.String())
 }
 
-func canUseARP(target netip.Addr) bool {
-	if !target.Is4() || runtime.GOOS != "linux" {
+func canUseARP(target model.Target) bool {
+	if !target.Addr.Is4() || runtime.GOOS != "linux" {
 		return false
 	}
 	ifaces, _ := net.Interfaces()
@@ -106,7 +106,7 @@ func canUseARP(target netip.Addr) bool {
 			if !ok {
 				continue
 			}
-			if ipNet.IP.To4() != nil && ipNet.Contains(target.AsSlice()) {
+			if ipNet.IP.To4() != nil && ipNet.Contains(target.Addr.AsSlice()) {
 				return true // same L2 subnet
 			}
 		}

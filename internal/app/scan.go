@@ -1,8 +1,7 @@
 package app
 
 import (
-	"encoding/json"
-	"math"
+	"fmt"
 	"os"
 	"time"
 
@@ -13,14 +12,15 @@ import (
 )
 
 func NewScanCmd() *cobra.Command {
-	var opts engine.RunOptions
+	var opts model.RunOptions
 	var req model.Request
 	var nmap bool
 	cmd := &cobra.Command{
-		Use:          "scan",
-		Short:        "scan targets",
-		SilenceUsage: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		Use:              "scan",
+		Short:            "scan targets",
+		SilenceUsage:     true,
+		TraverseChildren: true,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if nmap {
 				req.Backend = model.BackendNmap
 				argv := os.Args
@@ -36,51 +36,85 @@ func NewScanCmd() *cobra.Command {
 				req.ToolArgs = nmapArgs
 
 			} else {
-				targetList, err := targets.Resolve(args[0], targets.TargetTypeHost)
-				opts.Targets = targetList
-				return err
-
+				req.Backend = model.BackendInternal
 			}
-
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
+			targetList, err := targets.Resolve(args[0], model.TargetTypeHost)
+			opts.Targets = targetList
+
+			return err
 		},
 	}
 
 	cmd.PersistentFlags().BoolVar(&nmap, "nmap", false, "use nmap to scan")
-	cmd.PersistentFlags().IntVarP(&opts.Concurrency, "concurrency", "c", 10, "concurrency")
+	cmd.PersistentFlags().IntVarP(&opts.Concurrency, "concurrency", "c", 100, "concurrency")
 	cmd.PersistentFlags().IntVarP(&opts.MinRate, "min-rate", "m", 0, "min rate")
-	cmd.PersistentFlags().IntVarP(&opts.MaxRate, "max-rate", "M", math.MaxInt, "max rate")
-	cmd.PersistentFlags().IntVarP(&opts.MaxRetries, "max-retries", "r", 3, "max retries")
-	cmd.PersistentFlags().DurationVarP(&opts.Timeout, "timeout", "t", 3*time.Second, "timeout")
+	cmd.PersistentFlags().IntVarP(&opts.MaxRate, "max-rate", "M", 0, "max rate")
+	cmd.PersistentFlags().IntVarP(&opts.MaxRetries, "max-retries", "r", 1, "max retries")
+	cmd.PersistentFlags().DurationVarP(&opts.Timeout, "timeout", "t", 800*time.Millisecond, "timeout")
 
 	cmd.AddCommand(newScanHostsCmd(&req, &opts))
 	return cmd
 }
 
-func newScanHostsCmd(req *model.Request, opts *engine.RunOptions) *cobra.Command {
+func newScanHostsCmd(req *model.Request, opts *model.RunOptions) *cobra.Command {
+	var probeMethods []string
 	cmd := &cobra.Command{
 		Use:          "hosts",
 		Short:        "scan hosts",
 		SilenceUsage: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			err := cmd.Parent().PreRunE(cmd, args)
+			if err != nil {
+				return err
+			}
+			if len(probeMethods) != 0 {
+				for _, method := range probeMethods {
+					switch method {
+					case "tcp":
+						opts.TCP = true
+					case "icmp":
+						opts.ICMP = true
+					case "arp":
+						opts.ARP = true
+					default:
+						return fmt.Errorf("unknown probe method %q", method)
+					}
+				}
+			}
 			req.Mode = model.ModeHosts
+			targetList, err := targets.Resolve(args[0], model.TargetTypeHost)
+			if err != nil {
+				return err
+			}
+			opts.Targets = targetList
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			evCh := engine.New(opts).Run(cmd.Context(), *req)
+			count := 0
 
-			enc := json.NewEncoder(os.Stdout)
 			for ev := range evCh {
-				if err := enc.Encode(ev); err != nil {
-					return err
+
+				if ev.Finding == nil || ev.Finding.Host == nil {
+					continue
 				}
+
+				if ev.Finding.Host.State != model.HostStateUp {
+					continue
+				}
+
+				count++
+				fmt.Println(ev.Finding.Host.Addr, ev.Finding)
 			}
+			fmt.Println(count)
 			return nil
 		},
 	}
+
+	cmd.PersistentFlags().StringSliceVarP(&probeMethods, "methods", "P", []string{"arp", "icmp", "tcp"}, "probeMethods")
 
 	return cmd
 }

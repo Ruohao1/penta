@@ -29,16 +29,17 @@ func NewHomeModel() HomeModel {
 		nil,
 	)
 
-	consoleItem := components.NewMenuItem(
-		"Open Console",
-		"Interactive commands & logs",
-		consoleKey,
-		SwitchViewCmd(ConsoleView),
-	)
+	_ = consoleKey
+	// consoleItem := components.NewMenuItem(
+	// 	"Open Console",
+	// 	"Interactive commands & logs",
+	// 	consoleKey,
+	// 	SwitchViewCmd(ConsoleView),
+	// )
 
 	menu := components.NewMenu([]components.MenuItem{
 		scanItem,
-		consoleItem,
+		// consoleItem,
 	}, 5)
 
 	return HomeModel{Menu: menu}

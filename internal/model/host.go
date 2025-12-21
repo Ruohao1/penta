@@ -30,3 +30,11 @@ type Host struct {
 	FirstSeen time.Time `json:"first_seen"`
 	LastSeen  time.Time `json:"last_seen"`
 }
+
+func (t Target) MakeHost() Host {
+	host := Host{
+		Addr:      t.Addr,
+		Hostnames: []string{t.Hostname},
+	}
+	return host
+}

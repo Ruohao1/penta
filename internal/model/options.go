@@ -1,23 +1,28 @@
-package engine
+package model
 
 import (
 	"time"
-
-	"github.com/Ruohao1/penta/internal/targets"
 )
+
+type GlobalOptions struct {
+	Verbosity int
+	Human     bool
+
+	TUI bool
+	// TODO: add other global options here
+}
 
 type RunOptions struct {
 	// Target selection
-	Targets []targets.Target // parsed targets
-	Scope   []string         // allow-list enforcement
+	Targets []Target // parsed targets
+	Scope   []string // allow-list enforcement
 
 	// Scanning behavior
-	TCPPorts           []int // explicit port list
-	EnableDefaultPorts bool  // fallback (22,80,443...) if no ports provided
-	ICMP               bool  // do ICMP reachability test
-	ARP                bool  // do ARP scan (LAN-only)
-	HTTP               bool  // enable HTTP probes (title, server)
-	TLS                bool  // enable TLS fingerprinting
+	TCP  bool
+	ICMP bool // do ICMP reachability test
+	ARP  bool // do ARP scan (LAN-only)
+	HTTP bool // enable HTTP probes (title, server)
+	TLS  bool // enable TLS fingerprinting
 
 	// Performance + limits
 	Concurrency int // worker pool size
@@ -35,4 +40,7 @@ type RunOptions struct {
 	UserAgent  string        // custom UA for HTTP probes
 	Proxy      string        // socks5/http proxy optional
 	DNSServers []string      // optional custom resolvers
+}
+
+func (opts *RunOptions) Compile(req Request) {
 }

@@ -5,6 +5,7 @@ import (
 	// "github.com/Ruohao1/penta/internal/utils"
 
 	"github.com/Ruohao1/penta/internal/config"
+	"github.com/Ruohao1/penta/internal/model"
 	"github.com/Ruohao1/penta/internal/ui"
 	"github.com/Ruohao1/penta/internal/utils"
 	"github.com/rs/zerolog"
@@ -18,36 +19,33 @@ func Execute() error {
 }
 
 func newRootCmd() *cobra.Command {
-	var opts globalOptions
+	var opts model.GlobalOptions
+
 	cmd := &cobra.Command{
 		Use:          "penta",
 		Short:        "Ultimate pentest CLI engine",
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// 1) Map -v count -> log level
 			var lvl zerolog.Level
 			switch {
-			case opts.verbosity >= 3:
+			case opts.Verbosity >= 3:
 				lvl = zerolog.TraceLevel // -vvv and beyond
-			case opts.verbosity == 2:
+			case opts.Verbosity == 2:
 				lvl = zerolog.DebugLevel // -vv
-			case opts.verbosity == 1:
+			case opts.Verbosity == 1:
 				lvl = zerolog.InfoLevel // -v
 			default:
 				lvl = zerolog.WarnLevel // no -v
 			}
 
-			// 2) Load config
 			cfg := config.LoadConfig()
 
-			// 3) Build logger with level + human mode
-			logger := utils.NewLogger(opts.human, lvl).
+			logger := utils.NewLogger(opts.Human, lvl).
 				With().
 				Str("cmd", cmd.Name()).
 				Logger()
 			zerolog.SetGlobalLevel(lvl)
 
-			// 4) Attach to context
 			ctx := cmd.Context()
 			ctx = utils.WithLogger(ctx, logger)
 			ctx = utils.WithConfig(ctx, cfg)
@@ -61,9 +59,9 @@ func newRootCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().BoolVar(&opts.human, "human", true, "human-friendly log output")
-	cmd.PersistentFlags().CountVarP(&opts.verbosity, "verbose", "v", "increase verbosity (-v, -vv, -vvv)")
-	cmd.PersistentFlags().BoolVar(&opts.tui, "tui mode", true, "use tui mode")
+	cmd.PersistentFlags().BoolVar(&opts.Human, "human", true, "human-friendly log output")
+	cmd.PersistentFlags().CountVarP(&opts.Verbosity, "verbose", "v", "increase verbosity (-v, -vv, -vvv)")
+	cmd.PersistentFlags().BoolVar(&opts.TUI, "tui mode", true, "use tui mode")
 	return cmd
 }
 
