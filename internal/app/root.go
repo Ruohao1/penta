@@ -1,12 +1,8 @@
 package app
 
 import (
-	// "github.com/Ruohao1/penta/internal/config"
-	// "github.com/Ruohao1/penta/internal/utils"
-
 	"github.com/Ruohao1/penta/internal/config"
 	"github.com/Ruohao1/penta/internal/model"
-	"github.com/Ruohao1/penta/internal/ui"
 	"github.com/Ruohao1/penta/internal/utils"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -54,8 +50,9 @@ func newRootCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			return ui.RunTUI(ctx, ui.TuiOptions{})
+			// ctx := cmd.Context()
+			// return tui.RunTUI(ctx, tui.TuiOptions{})
+			return nil
 		},
 	}
 

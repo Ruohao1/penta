@@ -13,34 +13,38 @@ type GlobalOptions struct {
 }
 
 type RunOptions struct {
-	// Target selection
-	Targets []Target // parsed targets
-	Scope   []string // allow-list enforcement
+	Privileged bool
+	Scope      []string // allow-list enforcement
 
-	// Scanning behavior
-	TCP  bool
-	ICMP bool // do ICMP reachability test
-	ARP  bool // do ARP scan (LAN-only)
-	HTTP bool // enable HTTP probes (title, server)
-	TLS  bool // enable TLS fingerprinting
-
-	// Performance + limits
-	Concurrency int // worker pool size
-	MinRate     int
-	MaxRate     int
-	MaxRetries  int // retry failed probes
-
-	Timeout     time.Duration
-	TimeoutTCP  time.Duration // per-dial timeout
-	TimeoutHTTP time.Duration // per HTTP request
-	TimeoutTLS  time.Duration // TLS handshake deadline
-
-	// OpSec + networking
-	Jitter     time.Duration // random delay ± jitter per request
-	UserAgent  string        // custom UA for HTTP probes
-	Proxy      string        // socks5/http proxy optional
-	DNSServers []string      // optional custom resolvers
+	ProbeOpts ProbeOptions
+	Limits    Limits
+	Timeouts  Timeouts
 }
 
-func (opts *RunOptions) Compile(req Request) {
+type Limits struct {
+	MaxInFlight        int
+	MaxInFlightPerHost int
+	MaxRate            int
+	MinRate            int
+	MaxRetries         int
+}
+
+type Timeouts struct {
+	Overall time.Duration
+	TCP     time.Duration
+	HTTP    time.Duration
+	TLS     time.Duration
+}
+
+type ProbeOptions struct {
+	TCP  bool
+	ICMP bool
+	ARP  bool
+	HTTP bool
+	TLS  bool
+
+	Jitter     time.Duration
+	UserAgent  string
+	Proxy      string
+	DNSServers []string
 }

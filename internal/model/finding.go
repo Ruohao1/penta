@@ -1,18 +1,16 @@
 package model
 
-import (
-	"time"
-)
+import "time"
 
 type Finding struct {
-	Time     time.Time `json:"time"`
-	Check    string    `json:"check"`           // e.g. "tcp_open", "http_probe"
-	Proto    Protocol  `json:"proto,omitempty"` // "tcp", "udp", "http", "https"
-	Severity string    `json:"severity,omitempty"`
+	ObservedAt time.Time `json:"observed_at"`
+	Check      string    `json:"check"` // "tcp_connect", "tls_handshake", "http_probe"
+	Proto      Protocol  `json:"proto"`
 
-	Host   *Host   `json:"host,omitempty"`
-	RTTMs  float64 `json:"rtt_ms,omitempty"`
-	Reason string  `json:"reason,omitempty"`
+	Endpoint Endpoint `json:"endpoint"`           // where it happened
+	Severity string   `json:"severity,omitempty"` // info/low/med/high
+	Status   string   `json:"status"`             // "ok"|"fail"|"timeout"|"refused"|"unreachable"...
 
-	Meta map[string]any `json:"meta,omitempty"` // per-check extras
+	RTTMs float64        `json:"rtt_ms,omitempty"`
+	Meta  map[string]any `json:"meta,omitempty"` // check-specific payload
 }

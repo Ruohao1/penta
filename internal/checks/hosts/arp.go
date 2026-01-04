@@ -16,13 +16,13 @@ type arpProber struct{}
 func (p *arpProber) Name() string { return "arp" }
 
 func (p *arpProber) Probe(ctx context.Context, target model.Target, opts model.RunOptions) (model.Finding, error) {
-	host := target.MakeHost()
+	host := target.Host
 	host.State = model.HostStateUnknown
 
 	finding := model.Finding{
 		Check: "arp_probe",
 		Proto: model.ProtocolARP,
-		Host:  &host,
+		Host:  host,
 		Meta:  map[string]any{},
 	}
 
@@ -31,7 +31,7 @@ func (p *arpProber) Probe(ctx context.Context, target model.Target, opts model.R
 		return finding, nil
 	}
 
-	neigh, err := lookupARP(target.Addr)
+	neigh, err := lookupARP(host.Addr)
 	if err != nil {
 		host.State = model.HostStateDown
 
@@ -95,7 +95,7 @@ func lookupLinkIndex(ip netip.Addr) (int, error) {
 }
 
 func canUseARP(target model.Target) bool {
-	if !target.Addr.Is4() || runtime.GOOS != "linux" {
+	if !target.Host.Addr.Is4() || runtime.GOOS != "linux" {
 		return false
 	}
 	ifaces, _ := net.Interfaces()
@@ -106,7 +106,7 @@ func canUseARP(target model.Target) bool {
 			if !ok {
 				continue
 			}
-			if ipNet.IP.To4() != nil && ipNet.Contains(target.Addr.AsSlice()) {
+			if ipNet.IP.To4() != nil && ipNet.Contains(target.Host.Addr.AsSlice()) {
 				return true // same L2 subnet
 			}
 		}

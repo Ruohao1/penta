@@ -2,6 +2,7 @@ package model
 
 import (
 	"net/netip"
+	"strings"
 	"time"
 )
 
@@ -31,10 +32,15 @@ type Host struct {
 	LastSeen  time.Time `json:"last_seen"`
 }
 
-func (t Target) MakeHost() Host {
-	host := Host{
-		Addr:      t.Addr,
-		Hostnames: []string{t.Hostname},
+func (h Host) Address() string {
+	if len(h.Hostnames) > 0 {
+		hn := strings.TrimSpace(h.Hostnames[0])
+		if hn != "" {
+			return hn
+		}
 	}
-	return host
+	if h.Addr.IsValid() {
+		return h.Addr.String()
+	}
+	return ""
 }

@@ -2,119 +2,169 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Ruohao1/penta/internal/engine"
 	"github.com/Ruohao1/penta/internal/model"
-	"github.com/Ruohao1/penta/internal/targets"
+	"github.com/Ruohao1/penta/internal/stages"
+	"github.com/Ruohao1/penta/internal/stages/host_discovery"
+	"github.com/Ruohao1/penta/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 func NewScanCmd() *cobra.Command {
 	var opts model.RunOptions
-	var req model.Request
-	var nmap bool
 	cmd := &cobra.Command{
 		Use:              "scan",
 		Short:            "scan targets",
 		SilenceUsage:     true,
 		TraverseChildren: true,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if nmap {
-				req.Backend = model.BackendNmap
-				argv := os.Args
-				pre, post := targets.SplitDashDash(argv)
-
-				targetExpr := targets.ExtractTargets(pre, cmd.Flags()) // or cmd.InheritedFlags()/PersistentFlags as needed
-				nmapArgs := post
-
-				// If targets were provided before --, append them to nmap args (unless user already included them)
-				if len(targetExpr) > 0 {
-					nmapArgs = append(nmapArgs, targetExpr)
-				}
-				req.ToolArgs = nmapArgs
-
-			} else {
-				req.Backend = model.BackendInternal
-			}
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			targetList, err := targets.Resolve(args[0], model.TargetTypeHost)
-			opts.Targets = targetList
-
-			return err
+			// var err error
+			// task, err = model.NewScanTask(args[0], portsExpr)
+			// if err != nil {
+			// 	return err
+			// }
+			//
+			// evCh := engine.New(&opts).Run(cmd.Context(), task)
+			// count := 0
+			//
+			// for ev := range evCh {
+			//
+			// 	if ev.Finding == nil || ev.Finding.Host == nil {
+			// 		continue
+			// 	}
+			//
+			// 	if ev.Finding.Host.State != model.HostStateUp {
+			// 		continue
+			// 	}
+			//
+			// 	count++
+			// 	fmt.Println(ev.Finding.Host.Addr, ev.Finding)
+			// }
+			// fmt.Println(count)
+			return nil
 		},
 	}
 
-	cmd.PersistentFlags().BoolVar(&nmap, "nmap", false, "use nmap to scan")
-	cmd.PersistentFlags().IntVarP(&opts.Concurrency, "concurrency", "c", 100, "concurrency")
-	cmd.PersistentFlags().IntVarP(&opts.MinRate, "min-rate", "m", 0, "min rate")
-	cmd.PersistentFlags().IntVarP(&opts.MaxRate, "max-rate", "M", 0, "max rate")
-	cmd.PersistentFlags().IntVarP(&opts.MaxRetries, "max-retries", "r", 1, "max retries")
-	cmd.PersistentFlags().DurationVarP(&opts.Timeout, "timeout", "t", 800*time.Millisecond, "timeout")
+	cmd.PersistentFlags().IntVarP(&opts.Limits.MaxInFlight, "concurrency", "c", 400, "max concurrent operations (global)")
+	cmd.PersistentFlags().IntVarP(&opts.Limits.MaxInFlightPerHost, "concurrency-per-host", "H", 4, "max concurrent operations per host")
+	cmd.PersistentFlags().IntVarP(&opts.Limits.MinRate, "min-rate", "m", 0, "minimum rate (ops/s), 0 disables")
+	cmd.PersistentFlags().IntVarP(&opts.Limits.MaxRate, "max-rate", "M", 200, "maximum rate (ops/s), 0 disables")
+	cmd.PersistentFlags().IntVarP(&opts.Limits.MaxRetries, "max-retries", "r", 0, "max retries per operation")
+	cmd.PersistentFlags().DurationVarP(&opts.Timeouts.Overall, "timeout", "t", 5*time.Second, "overall operation timeout (0 disables)")
+	cmd.PersistentFlags().DurationVar(&opts.Timeouts.TCP, "timeout-tcp", 1500*time.Millisecond, "TCP connect timeout")
 
-	cmd.AddCommand(newScanHostsCmd(&req, &opts))
+	cmd.AddCommand(newScanHostsCmd(&opts))
+	cmd.AddCommand(newScanPortsCmd(&opts))
 	return cmd
 }
 
-func newScanHostsCmd(req *model.Request, opts *model.RunOptions) *cobra.Command {
+func newScanHostsCmd(opts *model.RunOptions) *cobra.Command {
 	var probeMethods []string
+	var portsExpr []string
+	var task model.Task
+
 	cmd := &cobra.Command{
 		Use:          "hosts",
-		Short:        "scan hosts",
+		Short:        "Host discovery",
+		SilenceUsage: true,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// err := cmd.Parent().PreRunE(cmd, args)
+			// if err != nil {
+			// 	return err
+			// }
+			var err error
+			if len(probeMethods) != 0 {
+				for _, method := range probeMethods {
+					switch method {
+					case "tcp":
+						opts.ProbeOpts.TCP = true
+					case "icmp":
+						opts.ProbeOpts.ICMP = true
+					case "arp":
+						opts.ProbeOpts.ARP = true
+					default:
+						return fmt.Errorf("unknown probe method %q", method)
+					}
+				}
+			}
+
+			task, err = model.NewHostDiscoveryTask(args[0], portsExpr)
+
+			return err
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			human, _ := cmd.InheritedFlags().GetBool("human")
+			sink := ui.NewSink(ui.SinkOptions{
+				JSON: !human,
+				Out:  cmd.OutOrStdout(),
+				Err:  cmd.ErrOrStderr(),
+			})
+
+			hostDiscoveryStage := host_discovery.New()
+			eng := engine.Engine{
+				Stages: []stages.Stage{hostDiscoveryStage},
+				Pool:   engine.DefaultPool,
+				Sink:   sink,
+			}
+
+			return eng.Run(ctx, task, *opts)
+		},
+	}
+
+	cmd.PersistentFlags().StringSliceVarP(&probeMethods, "methods", "P", []string{"arp", "icmp", "tcp"}, "methods use to probe")
+	cmd.PersistentFlags().StringSliceVarP(&portsExpr, "ports", "p", []string{"22", "80", "443"}, "tcp probe ports")
+
+	return cmd
+}
+
+func newScanPortsCmd(opts *model.RunOptions) *cobra.Command {
+	var portsExpr []string
+	var nmap bool
+	var task model.Task
+	cmd := &cobra.Command{
+		Use:          "ports",
+		Short:        "scan ports",
 		SilenceUsage: true,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			err := cmd.Parent().PreRunE(cmd, args)
 			if err != nil {
 				return err
 			}
-			if len(probeMethods) != 0 {
-				for _, method := range probeMethods {
-					switch method {
-					case "tcp":
-						opts.TCP = true
-					case "icmp":
-						opts.ICMP = true
-					case "arp":
-						opts.ARP = true
-					default:
-						return fmt.Errorf("unknown probe method %q", method)
-					}
-				}
-			}
-			req.Mode = model.ModeHosts
-			targetList, err := targets.Resolve(args[0], model.TargetTypeHost)
+			task, err = model.NewPortScanTask(args[0], portsExpr)
 			if err != nil {
 				return err
 			}
-			opts.Targets = targetList
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			evCh := engine.New(opts).Run(cmd.Context(), *req)
-			count := 0
-
-			for ev := range evCh {
-
-				if ev.Finding == nil || ev.Finding.Host == nil {
-					continue
-				}
-
-				if ev.Finding.Host.State != model.HostStateUp {
-					continue
-				}
-
-				count++
-				fmt.Println(ev.Finding.Host.Addr, ev.Finding)
-			}
-			fmt.Println(count)
+			_ = task
+			// evCh := engine.New(opts).Run(cmd.Context(), task)
+			// count := 0
+			//
+			// for ev := range evCh {
+			//
+			// 	if ev.Finding == nil || ev.Finding.Host == nil {
+			// 		continue
+			// 	}
+			//
+			// 	if ev.Finding.Host.State != model.HostStateUp {
+			// 		continue
+			// 	}
+			//
+			// 	count++
+			// 	fmt.Println(ev.Finding.Host.Addr, ev.Finding)
+			// }
+			// fmt.Println(count)
 			return nil
 		},
 	}
 
-	cmd.PersistentFlags().StringSliceVarP(&probeMethods, "methods", "P", []string{"arp", "icmp", "tcp"}, "probeMethods")
+	cmd.PersistentFlags().BoolVar(&nmap, "nmap", false, "use nmap to scan")
+	cmd.PersistentFlags().StringSliceVarP(&portsExpr, "ports", "p", []string{"22", "80", "443"}, "ports to probe with tcp")
 
 	return cmd
 }

@@ -1,33 +1,29 @@
 package runner
 
-import "sync"
+import (
+	"context"
+	"sync"
 
-// HostGate enforces at most N concurrent operations per host key.
-type HostGate struct {
-	mu    sync.Mutex
-	sem   map[string]chan struct{}
-	limit int
+	"golang.org/x/sync/semaphore"
+)
+
+type PerHostGate struct {
+	N int // max in-flight per host
+	m sync.Map
 }
 
-func NewHostGate(limit int) *HostGate {
-	if limit < 1 {
-		limit = 1
+func (g *PerHostGate) sem(key string) *semaphore.Weighted {
+	if g.N < 1 {
+		g.N = 1
 	}
-	return &HostGate{
-		sem:   make(map[string]chan struct{}),
-		limit: limit,
-	}
+	v, _ := g.m.LoadOrStore(key, semaphore.NewWeighted(int64(g.N)))
+	return v.(*semaphore.Weighted)
 }
 
-func (g *HostGate) Acquire(hostKey string) func() {
-	g.mu.Lock()
-	ch, ok := g.sem[hostKey]
-	if !ok {
-		ch = make(chan struct{}, g.limit)
-		g.sem[hostKey] = ch
-	}
-	g.mu.Unlock()
+func (g *PerHostGate) Acquire(ctx context.Context, key string) error {
+	return g.sem(key).Acquire(ctx, 1)
+}
 
-	ch <- struct{}{}
-	return func() { <-ch }
+func (g *PerHostGate) Release(key string) {
+	g.sem(key).Release(1)
 }
