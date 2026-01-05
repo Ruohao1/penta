@@ -32,7 +32,7 @@ func TCPConnect(ctx context.Context, d Dialer, addr string, timeout time.Duratio
 
 	start := time.Now()
 	c, err := d.DialContext(ctx, "tcp", addr)
-	elapsed := time.Since(start).Seconds() / 1000.0
+	elapsed := time.Since(start).Seconds()
 
 	result := &Result{ElapsedMs: elapsed}
 	if err != nil {

@@ -6,9 +6,9 @@ import (
 
 	"github.com/Ruohao1/penta/internal/engine"
 	"github.com/Ruohao1/penta/internal/model"
+	"github.com/Ruohao1/penta/internal/sinks"
 	"github.com/Ruohao1/penta/internal/stages"
 	"github.com/Ruohao1/penta/internal/stages/host_discovery"
-	"github.com/Ruohao1/penta/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -98,11 +98,22 @@ func newScanHostsCmd(opts *model.RunOptions) *cobra.Command {
 			ctx := cmd.Context()
 
 			human, _ := cmd.InheritedFlags().GetBool("human")
-			sink := ui.NewSink(ui.SinkOptions{
+			sink := sinks.NewSink(sinks.SinkOptions{
 				JSON: !human,
 				Out:  cmd.OutOrStdout(),
 				Err:  cmd.ErrOrStderr(),
 			})
+			sink = sinks.NewHostReducerSink(sink)
+
+			verbose, _ := cmd.InheritedFlags().GetCount("verbose")
+			var filterFunc sinks.FilterFunc
+			switch {
+			case verbose >= 2:
+				filterFunc = func(model.Event) bool { return true }
+			default:
+				filterFunc = sinks.OnlyOpen
+			}
+			sink = sinks.NewFilterSink(sink, filterFunc)
 
 			hostDiscoveryStage := host_discovery.New()
 			eng := engine.Engine{

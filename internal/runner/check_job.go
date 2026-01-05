@@ -7,17 +7,17 @@ import (
 
 	"github.com/Ruohao1/penta/internal/checks"
 	"github.com/Ruohao1/penta/internal/model"
-	"github.com/Ruohao1/penta/internal/ui"
+	"github.com/Ruohao1/penta/internal/sinks"
 )
 
 type CheckJob struct {
 	StageName string
-	HostKey   string // for per-host gate
+	HostKey   string
 
 	Checker checks.Checker
 	Input   any
 
-	Sink ui.EventSink
+	Sink sinks.Sink
 }
 
 func (j CheckJob) Key() string { return j.HostKey }
@@ -25,27 +25,15 @@ func (j CheckJob) Key() string { return j.HostKey }
 func (j CheckJob) Run(ctx context.Context) error {
 	emit := func(x any) {
 		switch v := x.(type) {
-		case model.Event:
-			switch t := v.Type; t {
-			case model.EventFinding:
-				j.Sink.Emit(ctx, model.Event{
-					EmittedAt: time.Now().UTC(),
-					Type:      model.EventFinding,
-					Stage:     j.StageName,
-					Finding:   v.Finding,
-				})
-			}
-		case model.HostStateEvent:
-			j.Sink.Emit(ctx, model.Event{
-				EmittedAt: time.Now().UTC(),
-				Type:      model.EventHostState,
-				Stage:     j.StageName,
-				HostState: &v,
-			})
+		case model.Finding:
+			ev := model.NewFindingEvent(&v)
+			ev.Stage = j.StageName
+			j.Sink.Emit(ctx, ev)
+
 		default:
 			j.Sink.Emit(ctx, model.Event{
 				EmittedAt: time.Now().UTC(),
-				Type:      model.EventFinding,
+				Type:      model.EventUnknown,
 				Stage:     j.StageName,
 				Err:       fmt.Sprintf("unknown event type: %T", x),
 			})

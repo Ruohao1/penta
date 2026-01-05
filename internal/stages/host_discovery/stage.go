@@ -8,7 +8,7 @@ import (
 	"github.com/Ruohao1/penta/internal/checks/tcpconnect"
 	"github.com/Ruohao1/penta/internal/model"
 	"github.com/Ruohao1/penta/internal/runner"
-	"github.com/Ruohao1/penta/internal/ui"
+	"github.com/Ruohao1/penta/internal/sinks"
 )
 
 type ProbeSet struct {
@@ -33,7 +33,7 @@ func New() stage {
 
 func (s stage) Name() string { return "host_discovery" }
 
-func (s stage) Build(ctx context.Context, task model.Task, opts model.RunOptions, sink ui.EventSink) ([]runner.Job, error) {
+func (s stage) Build(ctx context.Context, task model.Task, opts model.RunOptions, sink sinks.Sink) ([]runner.Job, error) {
 	// 1) expand targets
 	jobs := []runner.Job{}
 	targets, err := task.ExpandAllTargetsExpr()
@@ -69,7 +69,7 @@ func (s stage) Build(ctx context.Context, task model.Task, opts model.RunOptions
 	return jobs, nil
 }
 
-func (s stage) After(ctx context.Context, task model.Task, opts model.RunOptions, sink ui.EventSink) error {
+func (s stage) After(ctx context.Context, task model.Task, opts model.RunOptions, sink sinks.Sink) error {
 	return nil
 }
 

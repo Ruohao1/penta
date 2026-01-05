@@ -39,6 +39,8 @@ func classifyDialErr(result *Result, err error) *Result {
 func fromErrno(result *Result, errno syscall.Errno) *Result {
 	switch errno {
 	case syscall.ECONNREFUSED:
+		result.OK = true
+		result.State = "open"
 		result.Reason = "refused"
 	case syscall.ENETUNREACH, syscall.EHOSTUNREACH:
 		result.Reason = "unreachable"

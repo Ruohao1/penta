@@ -6,15 +6,15 @@ import (
 
 	"github.com/Ruohao1/penta/internal/model"
 	"github.com/Ruohao1/penta/internal/runner"
+	"github.com/Ruohao1/penta/internal/sinks"
 	"github.com/Ruohao1/penta/internal/stages"
-	"github.com/Ruohao1/penta/internal/ui"
 	"golang.org/x/time/rate"
 )
 
 type Engine struct {
 	Stages []stages.Stage
 	Pool   func(opts model.RunOptions) runner.Pool
-	Sink   ui.EventSink
+	Sink   sinks.Sink
 }
 
 func (e Engine) Run(ctx context.Context, task model.Task, opts model.RunOptions) error {

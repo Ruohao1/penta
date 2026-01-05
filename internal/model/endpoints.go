@@ -15,9 +15,29 @@ type Endpoint struct {
 	URL  *URLEndpoint `json:"url,omitempty"`
 }
 
+func (e Endpoint) Key() string {
+	switch e.Kind {
+	case EndpointNet:
+		return e.Net.Addr
+	case EndpointURL:
+		return e.URL.Host
+	default:
+		return ""
+	}
+}
+
 type NetEndpoint struct {
 	Addr string
 	Port int
+}
+
+type URLEndpoint struct {
+	Raw string
+
+	Scheme string
+	Host   string
+	Port   int
+	Path   string
 }
 
 func (e Endpoint) IsZero() bool {
@@ -50,15 +70,6 @@ func (e Endpoint) String() string {
 
 func (e NetEndpoint) String() string {
 	return e.Addr + ":" + strconv.Itoa(e.Port)
-}
-
-type URLEndpoint struct {
-	Raw string
-
-	Scheme string
-	Host   string
-	Port   int
-	Path   string
 }
 
 func NewEndpointNet(addr string, port int) Endpoint {
